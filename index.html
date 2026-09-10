@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAXI LED System Calculator</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        cadBg: '#0f172a',
+                        cadLine: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .dark ::-webkit-scrollbar-thumb { background-color: #475569; }
+        
+        body { transition: background-color 0.3s, color 0.3s; }
+        .card { transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s; }
+
+        /* CAD Grid Pattern */
+        .bg-cad-grid {
+            background-color: #0f172a; /* slate-900 */
+            background-image: 
+                linear-gradient(to right, #1e293b 1px, transparent 1px),
+                linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        .dark input[type=range]::-webkit-slider-runnable-track {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
+
+    <header class="bg-white border-gray-200 dark:bg-slate-900 dark:border-slate-800 border-b px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm transition-colors duration-300">
+        <h1 id="title" class="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
+            MAXI LED System Calculator
+        </h1>
+        <div class="flex gap-2 sm:gap-4">
+            <button id="btnLang" class="p-2 rounded-full hover:bg-gray-100 text-gray-600 dark:hover:bg-slate-800 dark:text-slate-300 transition-colors" title="Language">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                    <circle cx="12" cy="12" r="10"></circle><line x1="2" x2="22" y1="12" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+            </button>
+            <button id="btnTheme" class="p-2 rounded-full hover:bg-gray-100 text-slate-700 dark:hover:bg-slate-800 dark:text-yellow-400 transition-colors" title="Theme">
+                <!-- Theme icon injected via JS -->
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-[1400px]">
+        
+        <!-- CAD Viewer (Top Section) -->
+        <div class="card rounded-xl border shadow-sm mb-6 bg-slate-900 border-slate-700 overflow-hidden text-slate-100">
+            <div class="px-5 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-teal-400">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    <span id="lblCadViewer">실시간 CAD 도면 뷰어 (실제 축척 연동)</span>
+                </h2>
+                <div class="flex gap-4 text-xs font-medium">
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 bg-yellow-400 rounded-sm"></span> <span id="lblLedStrip">LED Strip</span></div>
+                    <div class="flex items-center gap-1"><span class="w-3 h-3 border-2 border-slate-500 bg-slate-700 rounded-sm"></span> Plug/Joint (50mm)</div>
+                </div>
+            </div>
+            
+            <div class="w-full overflow-x-auto bg-cad-grid relative custom-scrollbar">
+                <div class="min-w-[900px] w-full p-8 pb-12 relative flex flex-col items-center select-none" id="cadRenderArea">
+                    <!-- Dimensions Line -->
+                    <div id="cadDimLines" class="w-full flex flex-col mb-6 relative">
+                        <!-- Injected via JS -->
+                    </div>
+                    
+                    <!-- Physical Blocks -->
+                    <div id="cadBlocks" class="flex w-full h-16 drop-shadow-xl relative">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+            
+            <div class="lg:col-span-5 xl:col-span-4 space-y-6">
+                
+                <!-- System Information & Setup -->
+                <div class="card p-5 rounded-xl border shadow-sm bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-blue-500">
+                            <circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>
+                        </svg>
+                        <span id="lblSysInfo">System Information</span>
+                    </h2>
+                    
+                    <!-- Module Selection -->
+                    <div class="flex p-1 bg-gray-100 dark:bg-slate-700/50 rounded-lg mb-5 border border-gray-200 dark:border-slate-600">
+                        <button id="btnMod1" class="flex-1 py-1.5 px-2 rounded-md text-sm font-semibold transition-all shadow-sm">Single</button>
+                        <button id="btnMod2" class="flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-all">Double</button>
+                        <button id="btnMod3" class="flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-all">Triple</button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                                    <span id="lblWidth">Product Width (mm)</span>
+                                </label>
+                                <input type="number" id="inpWidth" min="1500" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                <p id="errWidth" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                            <div>
+                                <label id="lblProj" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Projection (mm)</label>
+                                <input type="number" id="inpProj" min="1000" max="10000" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label id="lblFHeight" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Front Height (mm)</label>
+                                <input type="number" id="inpFHeight" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                            </div>
+                            <div>
+                                <label id="lblRHeight" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Rear Height (mm)</label>
+                                <input type="number" id="inpRHeight" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center mt-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                            <input type="checkbox" id="inpOverhang" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 bg-gray-100 border-gray-300" />
+                            <label for="inpOverhang" id="lblOverhang" class="ml-2 text-sm font-medium cursor-pointer text-blue-800 dark:text-blue-300">Overhang Option</label>
+                            <span id="lblWidthMax" class="ml-auto text-xs font-semibold text-blue-600 dark:text-blue-400"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module Slider Config -->
+                <div class="card p-5 rounded-xl border shadow-sm bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="lblModules" class="text-lg font-semibold">Modules Config (W & F)</h2>
+                        <span id="modCountBadge" class="px-3 py-1 text-sm font-bold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                            1
+                        </span>
+                    </div>
+                    <p id="lblNoteF" class="text-xs mb-4 text-gray-500 dark:text-slate-400 leading-tight">
+                        * 슬라이더를 드래그하여 모듈별 너비를 조정하세요. (각 F값을 다르게 설정하면 가변 LED 길이가 자동 계산됩니다)
+                    </p>
+                    
+                    <div id="moduleInputsContainer" class="space-y-4">
+                        <!-- Sliders & Inputs dynamically injected via JS -->
+                    </div>
+                    
+                    <div id="errModSum" class="hidden mt-3 p-3 rounded-md bg-red-500/10 border border-red-500/30 text-red-500 text-sm">
+                        <!-- Dynamic Error Msg -->
+                    </div>
+                </div>
+
+                <!-- Middle Bars & LED Config -->
+                <div class="card p-5 rounded-xl border shadow-sm bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                    <h2 id="lblMidBars" class="text-lg font-semibold mb-4">Middle Bars Config</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label id="lblBaseMid" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Base Middle Bars</label>
+                                <input type="number" id="inpBaseMid" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                            </div>
+                            <div>
+                                <label id="lblAddMid" class="block text-sm font-medium text-gray-700 dark:text-slate-300">Add Middle Bars</label>
+                                <input type="number" id="inpAddMid" min="0" max="2" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                            </div>
+                        </div>
+                        <div>
+                            <label id="lblLedPlace" class="block text-sm font-medium text-gray-700 dark:text-slate-300">LED Bar Placement</label>
+                            <select id="inpLedPlace" class="w-full mt-1 p-2 border rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                <option value="1,4,7,10">1, 4, 7, 10...</option>
+                                <option value="1,3,5,7">1, 3, 5, 7...</option>
+                                <option value="2,4,6,8">2, 4, 6, 8...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+                
+                <!-- Summary Metrics (Excel Matched) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="card p-4 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                        <span id="lblAngle" class="text-sm mb-1 opacity-70">Roof Angle</span>
+                        <span class="text-2xl font-bold text-blue-500"><span id="valAngle">0</span><span id="valDeg">°</span></span>
+                    </div>
+                    <div class="card p-4 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                        <span id="lblRafter" class="text-sm mb-1 opacity-70">Rafter Length</span>
+                        <span class="text-2xl font-bold text-teal-500"><span id="valRafter">0</span><span class="text-sm font-normal ml-1">mm</span></span>
+                    </div>
+                    <div class="card p-4 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                        <span id="lblTotMid" class="text-sm mb-1 opacity-70">Total Middle Bars</span>
+                        <span id="valTotMid" class="text-2xl font-bold text-purple-500">0</span>
+                    </div>
+                    <div class="card p-4 rounded-xl border shadow-sm flex flex-col justify-center items-center text-center bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                        <span id="lblTotLed" class="text-sm mb-1 opacity-70">Total LED Bars</span>
+                        <span id="valTotLed" class="text-2xl font-bold text-yellow-500">0</span>
+                    </div>
+                </div>
+
+                <!-- Power Summary -->
+                <div class="card p-6 rounded-xl border shadow-sm bg-gradient-to-br from-blue-50 to-white border-blue-100 dark:from-slate-800 dark:to-slate-900 dark:border-slate-700">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h2 id="lblPower" class="text-xl font-bold">Total Required Power</h2>
+                            <p class="text-sm mt-1 text-gray-500 dark:text-slate-400">
+                                <span id="lblLedLen">Total LED Length</span>: <span id="valLedLen">0</span> mm
+                            </p>
+                        </div>
+                        <div class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-400">
+                            <span id="valPower">0.0</span> <span class="text-2xl text-orange-400">W</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Bar Lengths Summary -->
+                <div class="card p-5 rounded-xl border shadow-sm bg-white border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                    <h2 id="lblMidBarHeader" class="text-lg font-semibold mb-4">Middle Bar Lengths</h2>
+                    <div id="midBarStats" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Localization
+        const dict = {
+            en: {
+                title: "MAXI LED System Calculator",
+                cadViewer: "Real-time CAD Viewer (Actual Scale)",
+                sysInfo: "System Information",
+                width: "Product Width (mm)",
+                proj: "Projection (mm)",
+                fHeight: "Front Height (mm)",
+                rHeight: "Rear Height (mm)",
+                overhang: "Overhang Option",
+                modules: "Modules Config & Scale",
+                modSumErr: "Sum of module widths must equal total width.",
+                modWidth: "Mod Width",
+                midBars: "Middle Bars Config",
+                baseMid: "Base Middle Bars (A12)",
+                auto: "Auto:",
+                addMid: "Additional Middle Bars",
+                ledPlace: "LED Bar Placement",
+                angle: "Roof Angle",
+                rafter: "Rafter Length",
+                totMid: "Total Middle Bars",
+                totLedBars: "Total LED Bars",
+                ledLength: "Total LED Length",
+                power: "Total Required Power",
+                left: "LEFT",
+                middle: "CENTER",
+                right: "RIGHT",
+                single: "Single",
+                double: "Double",
+                triple: "Triple",
+                invalidW: "Exceeds max width",
+                max: "Max",
+                deg: "°",
+                totalWidth: "Total Width",
+                actualLength: "Actual Bar Length",
+                midBarLen: "Middle Bar Length",
+                ledStrip: "LED Strip (Variable)",
+                noteF: "* Slide to adjust width. Adjust F values individually. LED is a continuous strip.",
+                midBarHeader: "Middle Bar Lengths"
+            },
+            ko: {
+                title: "MAXI LED 시스템 계산기",
+                cadViewer: "실시간 CAD 도면 뷰어 (실제 축척 연동)",
+                sysInfo: "시스템 정보 입력",
+                width: "제품 너비 (mm)",
+                proj: "제품 돌출 (mm)",
+                fHeight: "앞높이 (mm)",
+                rHeight: "뒷높이 (mm)",
+                overhang: "오버행 옵션 적용",
+                modules: "모듈 스크롤 설정",
+                modSumErr: "모듈 너비의 합은 총 너비와 같아야 합니다.",
+                modWidth: "모듈 너비",
+                midBars: "미들바 설정",
+                baseMid: "기본 미들바 (자동 계산)",
+                auto: "자동:",
+                addMid: "추가 미들바 (최대 2)",
+                ledPlace: "LED 바 배치 순서",
+                angle: "제품 각도",
+                rafter: "라프터 길이",
+                totMid: "미들바 총 개수",
+                totLedBars: "총 LED 바 개수",
+                ledLength: "총 LED 길이",
+                power: "총 LED 소요 전력",
+                left: "LEFT",
+                middle: "CENTER",
+                right: "RIGHT",
+                single: "단일",
+                double: "2모듈",
+                triple: "3모듈",
+                invalidW: "최대 너비 초과",
+                max: "최대",
+                deg: "°",
+                totalWidth: "전체 제품 너비",
+                actualLength: "실질적 바 길이 (-30mm)",
+                midBarLen: "미들바 길이",
+                ledStrip: "가변 LED 스트립",
+                noteF: "* 슬라이더로 너비 조정 및 F값을 개별적으로 수정할 수 있습니다. 빈 공간은 LED 스트립으로 채워집니다.",
+                midBarHeader: "모듈별 미들바(Middle Bar) 길이 상세"
+            }
+        };
+
+        const iconSun = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`;
+        const iconMoon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>`;
+
+        let state = {
+            lang: 'en',
+            darkMode: true,
+            width: 3000,
+            projection: 3000,
+            frontHeight: 2500,
+            rearHeight: 2800,
+            overhang: false,
+            numModules: 1,
+            moduleWidths: [3000],
+            fValues: [100], 
+            manualBaseBars: '',
+            addMiddleBars: 0,
+            ledPlacement: '1,4,7,10'
+        };
+
+        const dom = {
+            btnLang: document.getElementById('btnLang'),
+            btnTheme: document.getElementById('btnTheme'),
+            btnMod1: document.getElementById('btnMod1'),
+            btnMod2: document.getElementById('btnMod2'),
+            btnMod3: document.getElementById('btnMod3'),
+            inpWidth: document.getElementById('inpWidth'),
+            inpProj: document.getElementById('inpProj'),
+            inpFHeight: document.getElementById('inpFHeight'),
+            inpRHeight: document.getElementById('inpRHeight'),
+            inpOverhang: document.getElementById('inpOverhang'),
+            inpBaseMid: document.getElementById('inpBaseMid'),
+            inpAddMid: document.getElementById('inpAddMid'),
+            inpLedPlace: document.getElementById('inpLedPlace'),
+            
+            moduleInputsContainer: document.getElementById('moduleInputsContainer'),
+            cadDimLines: document.getElementById('cadDimLines'),
+            cadBlocks: document.getElementById('cadBlocks'),
+            
+            errWidth: document.getElementById('errWidth'),
+            errModSum: document.getElementById('errModSum'),
+            modCountBadge: document.getElementById('modCountBadge'),
+            lblWidthMax: document.getElementById('lblWidthMax'),
+            
+            valAngle: document.getElementById('valAngle'),
+            valRafter: document.getElementById('valRafter'),
+            valTotMid: document.getElementById('valTotMid'),
+            valTotLed: document.getElementById('valTotLed'),
+            valLedLen: document.getElementById('valLedLen'),
+            valPower: document.getElementById('valPower'),
+            midBarStats: document.getElementById('midBarStats'),
+        };
+
+        function applyTranslations() {
+            const t = dict[state.lang];
+            document.getElementById('title').innerText = t.title;
+            document.getElementById('lblCadViewer').innerText = t.cadViewer;
+            document.getElementById('lblSysInfo').innerText = t.sysInfo;
+            document.getElementById('lblWidth').innerText = t.width;
+            document.getElementById('lblOverhang').innerText = t.overhang;
+            document.getElementById('lblProj').innerText = t.proj;
+            document.getElementById('lblFHeight').innerText = t.fHeight;
+            document.getElementById('lblRHeight').innerText = t.rHeight;
+            document.getElementById('lblModules').innerText = t.modules;
+            document.getElementById('lblMidBars').innerText = t.midBars;
+            document.getElementById('lblBaseMid').innerText = t.baseMid;
+            document.getElementById('lblAddMid').innerText = t.addMid;
+            document.getElementById('lblLedPlace').innerText = t.ledPlace;
+            document.getElementById('lblAngle').innerText = t.angle;
+            document.getElementById('valDeg').innerText = t.deg;
+            document.getElementById('lblRafter').innerText = t.rafter;
+            document.getElementById('lblTotMid').innerText = t.totMid;
+            document.getElementById('lblTotLed').innerText = t.totLedBars;
+            document.getElementById('lblPower').innerText = t.power;
+            document.getElementById('lblLedLen').innerText = t.ledLength;
+            
+            document.getElementById('lblLedStrip').innerText = t.ledStrip;
+            document.getElementById('lblNoteF').innerText = t.noteF;
+            document.getElementById('lblMidBarHeader').innerText = t.midBarHeader;
+            
+            dom.btnMod1.innerText = t.single;
+            dom.btnMod2.innerText = t.double;
+            dom.btnMod3.innerText = t.triple;
+            
+            renderModuleInputs();
+            calculateAndRender();
+        }
+
+        function toggleTheme() {
+            state.darkMode = !state.darkMode;
+            if (state.darkMode) {
+                document.documentElement.classList.add('dark');
+                dom.btnTheme.innerHTML = iconSun;
+            } else {
+                document.documentElement.classList.remove('dark');
+                dom.btnTheme.innerHTML = iconMoon;
+            }
+            updateModuleButtonsUI();
+        }
+        
+        function updateModuleButtonsUI() {
+            [1, 2, 3].forEach(n => {
+                const btn = dom[`btnMod${n}`];
+                if(n === state.numModules) {
+                    btn.className = `flex-1 py-1.5 px-2 rounded-md text-sm font-semibold transition-all shadow-sm ${state.darkMode ? 'bg-slate-600 text-blue-300' : 'bg-blue-500 text-white'}`;
+                } else {
+                    btn.className = `flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-all ${state.darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}`;
+                }
+            });
+        }
+
+        function distributeToEqualAlum(totalW, type) {
+            if (type === 1) return [totalW];
+            if (type === 2) {
+                // 총 차감 180mm (좌90, 우90)
+                let targetAlum = Math.round((totalW - 180) / 2);
+                let wL = targetAlum + 90;
+                let wR = totalW - wL;
+                return [wL, wR];
+            }
+            if (type === 3) {
+                // 총 차감 230mm (좌90, 중50, 우90) -> 반올림 처리하여 좌우 대칭 유지
+                let targetAlum = Math.round((totalW - 230) / 3);
+                let wL = targetAlum + 90;
+                let wR = wL; // Left와 Right를 동일하게 강제
+                let wC = totalW - wL - wR; // Center가 나머지(오차) 흡수
+                return [wL, wC, wR];
+            }
+            return [totalW];
+        }
+
+        function setModuleType(type) {
+            state.numModules = type;
+            updateModuleButtonsUI();
+            
+            // 모듈 개수 변경 시 알루미늄 바 길이가 균등하도록 모듈 너비를 자동 분배 (Left/Right가 Center보다 40mm 넓게 설정됨)
+            state.moduleWidths = distributeToEqualAlum(state.width, type);
+            
+            while(state.fValues.length < type) state.fValues.push(100);
+            state.fValues.length = type;
+
+            dom.modCountBadge.innerText = type;
+            renderModuleInputs();
+            calculateAndRender();
+        }
+
+        function handleSliderChange(index, newVal) {
+            let oldVal = state.moduleWidths[index];
+            let diff = newVal - oldVal;
+
+            if (state.numModules === 1) {
+                state.width = newVal;
+                state.moduleWidths[0] = newVal;
+                dom.inpWidth.value = newVal; // Update master input
+            } 
+            else if (state.numModules === 2) {
+                let other = index === 0 ? 1 : 0;
+                if (state.moduleWidths[other] - diff >= 500) { // Min 500mm limit
+                    state.moduleWidths[index] = newVal;
+                    state.moduleWidths[other] -= diff;
+                } else {
+                    // Maxed out, clamp it
+                    let maxAllowedDiff = state.moduleWidths[other] - 500;
+                    state.moduleWidths[index] = oldVal + maxAllowedDiff;
+                    state.moduleWidths[other] = 500;
+                }
+            } 
+            else if (state.numModules === 3) {
+                // Adjust the next module logically to maintain sum
+                let other = index === 2 ? 1 : index + 1; 
+                if (state.moduleWidths[other] - diff >= 500) {
+                    state.moduleWidths[index] = newVal;
+                    state.moduleWidths[other] -= diff;
+                } else {
+                    let maxAllowedDiff = state.moduleWidths[other] - 500;
+                    state.moduleWidths[index] = oldVal + maxAllowedDiff;
+                    state.moduleWidths[other] = 500;
+                }
+            }
+            
+            // Sync all visual inputs immediately without losing focus
+            for (let i = 0; i < state.numModules; i++) {
+                let numInp = document.getElementById(`modWidth_${i}`);
+                let slInp = document.getElementById(`modSlider_${i}`);
+                if (numInp) numInp.value = state.moduleWidths[i];
+                if (slInp) slInp.value = state.moduleWidths[i];
+            }
+            
+            calculateAndRender();
+        }
+
+        function renderModuleInputs() {
+            const t = dict[state.lang];
+            dom.moduleInputsContainer.innerHTML = '';
+            
+            state.moduleWidths.forEach((w, index) => {
+                let fLabelName = 'F1';
+                if(state.numModules === 2 && index === 1) fLabelName = 'F2';
+                else if(state.numModules === 3) {
+                    if(index === 1) fLabelName = 'F3';
+                    if(index === 2) fLabelName = 'F2';
+                }
+
+                // Ensure Slider max maps to limits
+                let maxSlider = state.numModules === 1 ? 6000 : state.width - (500 * (state.numModules - 1));
+
+                const div = document.createElement('div');
+                div.className = "p-4 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-100 dark:border-slate-700";
+                div.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-semibold text-gray-600 dark:text-slate-300">
+                            ${t.modWidth} ${index + 1}
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="modWidth_${index}" value="${w}" min="500"
+                                class="w-24 p-1 text-right border rounded shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                            <span class="text-xs text-slate-500">mm</span>
+                        </div>
+                    </div>
+                    
+                    <input type="range" id="modSlider_${index}" min="500" max="${maxSlider}" value="${w}" class="w-full mt-1 mb-3" />
+                    
+                    <div class="flex items-center justify-between border-t border-gray-200 dark:border-slate-700 pt-2">
+                        <label class="text-xs font-semibold text-teal-600 dark:text-teal-400">Target ${fLabelName}</label>
+                        <input type="number" id="modF_${index}" value="${state.fValues[index]}" min="100"
+                               class="w-20 p-1 text-right border rounded shadow-sm focus:ring-2 focus:ring-teal-500 focus:outline-none text-sm bg-white border-gray-300 text-gray-900 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                    </div>
+                `;
+                dom.moduleInputsContainer.appendChild(div);
+                
+                // Add Event Listeners
+                document.getElementById(`modSlider_${index}`).addEventListener('input', (e) => {
+                    handleSliderChange(index, Number(e.target.value));
+                });
+                document.getElementById(`modWidth_${index}`).addEventListener('change', (e) => {
+                    let val = Math.max(500, Number(e.target.value));
+                    handleSliderChange(index, val);
+                });
+                document.getElementById(`modF_${index}`).addEventListener('input', (e) => {
+                    state.fValues[index] = Math.max(0, Number(e.target.value));
+                    calculateAndRender();
+                });
+            });
+        }
+
+        function calculateAndRender() {
+            const t = dict[state.lang];
+
+            // 1. Core Bounds Check
+            let maxWidth = 13000;
+            if (state.numModules === 1) maxWidth = state.overhang ? 6000 : 5000;
+            else if (state.numModules === 2) maxWidth = state.overhang ? 10000 : 9000;
+            else if (state.numModules === 3) maxWidth = state.overhang ? 14000 : 13000;
+
+            dom.lblWidthMax.innerText = `(${t.max} ${maxWidth})`;
+            const isWidthValid = state.width <= maxWidth && state.width >= 1500;
+            
+            if (!isWidthValid) {
+                dom.errWidth.innerText = t.invalidW;
+                dom.errWidth.classList.remove('hidden');
+                dom.inpWidth.classList.add('border-red-500');
+            } else {
+                dom.errWidth.classList.add('hidden');
+                dom.inpWidth.classList.remove('border-red-500');
+            }
+
+            // 2. Excel Matched Math formulas
+            const I6 = state.projection; 
+            const C6 = state.rearHeight; 
+            const F6 = state.frontHeight; 
+            
+            const X41 = 150.93 - 97.43; // 53.5
+            const I12 = (C6 - F6 - 292) / (I6 - 103.5); 
+            const E12 = 57.29 * Math.atan(I12);
+            const angleDeg = E12.toFixed(2);
+            const angleRad = E12 * (Math.PI / 180);
+            
+            const G12 = Math.cos(E12 / 57.29);
+            const W41 = 78.5;
+            const X42 = Math.tan((E12 / 2) * (Math.PI / 180)) * X41;
+            const W42 = Math.tan(angleRad) * (W41 + X42);
+            
+            const rafterLength = (((I6 - 150.93) / G12) + W42 + 20).toFixed(0);
+
+            // Middle Bars Logic
+            const E14 = angleDeg;
+            const divisor = (E14 >= 6) ? 500 : 520;
+            let calcBaseBars = Math.floor(rafterLength / divisor) - 1;
+            calcBaseBars = Math.max(0, calcBaseBars);
+
+            dom.inpBaseMid.placeholder = `${t.auto} ${calcBaseBars}`;
+            const baseBars = state.manualBaseBars !== '' ? (parseInt(state.manualBaseBars) || 0) : calcBaseBars;
+            const totalMiddleBars = baseBars + Number(state.addMiddleBars);
+
+            // LED Bars count logic (홀수/짝수/3칸 간격 로직 적용)
+            let ledBarCount = 0;
+            if (state.ledPlacement === '1,3,5,7') {
+                ledBarCount = Math.ceil(totalMiddleBars / 2); // 홀수 번째: 5개면 3개
+            } else if (state.ledPlacement === '2,4,6,8') {
+                ledBarCount = Math.floor(totalMiddleBars / 2); // 짝수 번째: 5개면 2개
+            } else if (state.ledPlacement === '1,4,7,10') {
+                ledBarCount = Math.ceil(totalMiddleBars / 3); // 3칸 간격 (1부터 시작): 5개면 2개
+            }
+
+            // UI Scalars Update
+            dom.valAngle.innerText = isNaN(angleDeg) ? "0" : angleDeg;
+            dom.valRafter.innerText = isNaN(rafterLength) ? "0" : rafterLength;
+            dom.valTotMid.innerText = totalMiddleBars;
+            dom.valTotLed.innerText = ledBarCount;
+
+            let totalLedLengthMm = 0;
+            let cadEntities = [];
+            
+            // Build Left Plug
+            cadEntities.push({ type: 'plug', width: 50, label: '50' });
+
+            state.moduleWidths.forEach((wStr, index) => {
+                const w = Number(wStr);
+                let effW = 0;
+                let name = '';
+                let colorClass = '';
+                
+                // Effective width rules mapping Excel plug joints
+                if (state.numModules === 1) {
+                    effW = w - 130;
+                    name = 'SINGLE BAY';
+                    colorClass = 'bg-blue-600/90 border-blue-400';
+                } else if (state.numModules === 2) {
+                    if (index === 0) { effW = w - 90; name = t.left; colorClass = 'bg-blue-600/90 border-blue-400'; }
+                    if (index === 1) { effW = w - 90; name = t.right; colorClass = 'bg-emerald-600/90 border-emerald-400'; }
+                } else if (state.numModules === 3) {
+                    if (index === 0) { effW = w - 90; name = t.left; colorClass = 'bg-blue-600/90 border-blue-400'; }
+                    if (index === 1) { effW = w - 50; name = t.middle; colorClass = 'bg-cyan-600/90 border-cyan-400'; }
+                    if (index === 2) { effW = w - 90; name = t.right; colorClass = 'bg-emerald-600/90 border-emerald-400'; }
+                }
+
+                // Calc Target F and LED (Variable Strip)
+                const userTargetF = state.fValues[index] || 100;
+                let ledLength = effW - (2 * userTargetF);
+                if (ledLength < 0) ledLength = 0; // Prevent negative LED length
+                const f = userTargetF;
+
+                totalLedLengthMm += ledLength;
+
+                // Push Module
+                cadEntities.push({ 
+                    type: 'module', width: effW, f: f, ledLength: ledLength, 
+                    name: name, color: colorClass
+                });
+
+                // Push Joint if not last
+                if (index < state.numModules - 1) {
+                    cadEntities.push({ type: 'joint', width: 50, label: '50' });
+                }
+            });
+
+            // Build Right Plug
+            cadEntities.push({ type: 'plug', width: 50, label: '50' });
+
+            // 3. Render CAD HTML
+            const actualWidth = state.width - 30;
+            
+            // Total Product Width Dimension
+            let dimLinesHtml = `
+                <div class="w-full relative h-10 mb-2 border-b-2 border-blue-500/80">
+                    <div class="absolute -top-1 left-1/2 -translate-x-1/2 flex flex-col items-center whitespace-nowrap bg-cad-grid px-2">
+                        <span class="text-sm text-blue-400 font-bold tracking-wider">${t.totalWidth}: ${state.width} mm</span>
+                        <span class="text-xs text-slate-400">(${t.actualLength}: ${state.width} - 30 = <span class="text-red-400 font-bold">${actualWidth}</span> mm)</span>
+                    </div>
+                    <div class="absolute left-0 bottom-0 h-3 w-[2px] bg-blue-500/80"></div>
+                    <div class="absolute right-0 bottom-0 h-3 w-[2px] bg-blue-500/80"></div>
+                </div>
+                <div class="flex w-full relative border-t border-slate-500/50 mt-4">
+            `;
+            
+            state.moduleWidths.forEach((wStr, i) => {
+                let w = Number(wStr);
+                let p = (w / state.width) * 100;
+                let moduleLabel = state.numModules === 1 ? 'SINGLE BAY' : (i===0 ? t.left : (state.numModules===3 && i===1) ? t.middle : t.right);
+                
+                dimLinesHtml += `
+                    <div class="relative border-x border-slate-500/50 h-6" style="width: ${p}%; border-bottom: 1px solid #475569;">
+                        <div class="absolute -top-5 left-1/2 -translate-x-1/2 flex flex-col items-center whitespace-nowrap bg-cad-grid px-1">
+                            <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">${moduleLabel}</span>
+                            <span class="text-xs text-blue-300 font-mono">${w} <span class="text-[9px] text-slate-500">mm</span></span>
+                        </div>
+                    </div>
+                `;
+            });
+            dimLinesHtml += `</div>`; // Close the flex wrapper
+            
+            dom.cadDimLines.innerHTML = dimLinesHtml;
+
+            let blocksHtml = '';
+            let midBarStatsHtml = '';
+            
+            cadEntities.forEach(ent => {
+                let p = (ent.width / state.width) * 100;
+                
+                if (ent.type === 'plug' || ent.type === 'joint') {
+                    blocksHtml += `
+                        <div class="h-16 bg-slate-700/80 border-2 border-slate-500/60 rounded flex flex-col items-center justify-center relative overflow-hidden backdrop-blur-sm shadow-inner" style="width: ${p}%">
+                            <div class="absolute top-0 bottom-0 left-0 right-0" style="background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.05) 4px, rgba(255,255,255,0.05) 8px);"></div>
+                            <span class="text-[9px] text-white/80 font-bold z-10">${ent.label}</span>
+                        </div>
+                    `;
+                } else {
+                    let pf = (ent.f / ent.width) * 100;
+                    let pled = (ent.ledLength / ent.width) * 100;
+                    
+                    blocksHtml += `
+                        <div class="h-16 ${ent.color} border-y-2 border-x border-black/20 flex flex-col items-center justify-center relative shadow-lg overflow-hidden transition-all duration-300" style="width: ${p}%">
+                            
+                            <!-- Inner Segments -->
+                            <div class="absolute w-full h-1/2 bottom-0 flex">
+                                <div class="h-full border-t border-r border-white/20 bg-black/10 flex items-center justify-center" style="width:${pf}%">
+                                    <span class="text-xs font-bold text-white whitespace-nowrap drop-shadow-md">F: ${ent.f.toFixed(1)}</span>
+                                </div>
+                                <div class="h-full ${ent.ledLength > 0 ? 'bg-yellow-400/90 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-transparent'} flex items-center justify-center border-t border-white/20" style="width:${pled}%">
+                                    ${ent.ledLength > 0 ? `<span class="text-xs text-slate-900 font-extrabold whitespace-nowrap tracking-tighter">LED: ${ent.ledLength}mm</span>` : ''}
+                                </div>
+                                <div class="h-full border-t border-l border-white/20 bg-black/10 flex items-center justify-center" style="width:${pf}%">
+                                    <span class="text-xs font-bold text-white whitespace-nowrap drop-shadow-md">F: ${ent.f.toFixed(1)}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Main Label -->
+                            <div class="absolute top-1 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                                <span class="text-xs font-bold text-white/90 drop-shadow">${ent.name}</span>
+                                <span class="text-[10px] font-mono text-white/70">${t.midBarLen}: ${ent.width}mm</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Generate Mid Bar Stat Card
+                    midBarStatsHtml += `
+                        <div class="p-4 rounded-lg bg-gray-50 border border-gray-100 dark:bg-slate-900/50 dark:border-slate-700 flex flex-col justify-center items-center text-center shadow-sm">
+                            <span class="text-xs mb-1 font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">${ent.name} ${t.midBarLen}</span>
+                            <span class="text-xl font-bold text-blue-500">${ent.width} <span class="text-xs text-slate-400 font-normal">mm</span></span>
+                            <span class="text-[10px] mt-1 text-slate-500 dark:text-slate-400 font-medium">LED Strip: <span class="text-orange-400">${ent.ledLength}mm</span> | F: <span class="text-teal-500">${ent.f}mm</span></span>
+                        </div>
+                    `;
+                }
+            });
+            dom.cadBlocks.innerHTML = blocksHtml;
+            dom.midBarStats.innerHTML = midBarStatsHtml;
+
+            // Update Total Power
+            const totalPower = ((totalLedLengthMm / 1000) * 10 * ledBarCount).toFixed(1);
+            dom.valLedLen.innerText = totalLedLengthMm;
+            dom.valPower.innerText = totalPower;
+        }
+
+        // Main Inputs
+        dom.inpWidth.addEventListener('change', (e) => {
+            let newWidth = Number(e.target.value);
+            state.width = newWidth;
+            
+            // 너비 변경 시 모듈 길이 재분배 (초기값 균등 도출 규칙 적용)
+            state.moduleWidths = distributeToEqualAlum(newWidth, state.numModules);
+            
+            renderModuleInputs();
+            calculateAndRender();
+        });
+
+        dom.inpOverhang.addEventListener('change', (e) => {
+            state.overhang = e.target.checked;
+            renderModuleInputs(); // Re-render to update slider max attribute limit
+            calculateAndRender();
+        });
+
+        const simpleInputs = [
+            { el: dom.inpProj, key: 'projection' },
+            { el: dom.inpFHeight, key: 'frontHeight' },
+            { el: dom.inpRHeight, key: 'rearHeight' }
+        ];
+        simpleInputs.forEach(item => {
+            item.el.addEventListener('input', (e) => {
+                state[item.key] = Number(e.target.value);
+                calculateAndRender();
+            });
+        });
+
+        dom.inpBaseMid.addEventListener('input', (e) => {
+            state.manualBaseBars = e.target.value;
+            calculateAndRender();
+        });
+
+        dom.inpAddMid.addEventListener('input', (e) => {
+            let val = Math.min(2, Math.max(0, Number(e.target.value)));
+            e.target.value = val;
+            state.addMiddleBars = val;
+            calculateAndRender();
+        });
+
+        dom.inpLedPlace.addEventListener('change', (e) => {
+            // 버그 수정: ledPlace -> ledPlacement 상태 변수명 일치
+            state.ledPlacement = e.target.value; 
+            calculateAndRender();
+        });
+
+        dom.btnMod1.addEventListener('click', () => setModuleType(1));
+        dom.btnMod2.addEventListener('click', () => setModuleType(2));
+        dom.btnMod3.addEventListener('click', () => setModuleType(3));
+
+        dom.btnLang.addEventListener('click', () => {
+            state.lang = state.lang === 'en' ? 'ko' : 'en';
+            applyTranslations();
+        });
+
+        dom.btnTheme.addEventListener('click', toggleTheme);
+
+        // Bootstrap App
+        window.onload = function() {
+            dom.btnTheme.innerHTML = iconSun; // Boot in Dark Mode
+            dom.inpWidth.value = state.width;
+            dom.inpProj.value = state.projection;
+            dom.inpFHeight.value = state.frontHeight;
+            dom.inpRHeight.value = state.rearHeight;
+            
+            updateModuleButtonsUI();
+            applyTranslations(); 
+        };
+    </script>
+</body>
+</html>
